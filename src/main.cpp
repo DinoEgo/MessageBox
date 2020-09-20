@@ -41,6 +41,15 @@ enum ScreenState
 };
 ScreenState currentScreen = ScreenState::none;
 
+#define ssid_x 40
+#define ssid_y 20
+#define ssid_w 150
+#define ssid_h 20
+#define pw_x 281
+#define pw_y 20
+#define pw_w 150
+#define pw_h 20
+
 const String text_keyboard[42] = {
     "OK", "Clear", "Del", "Shift", "Caps", "Sym",
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
