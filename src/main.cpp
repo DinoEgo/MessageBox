@@ -66,8 +66,93 @@ const String symbol_keyboard[42] = {
 
 TFT_eSPI_Button keys[42];
 
+class TFT_Select_Box
+{
+private:
+    int16_t _x, _y, _w, _h, _outlinecolor, _fillcolor, _textcolor, _selectcolor = 0;
+    uint8_t _textsize, _textdatum = 0;
+    TFT_eSPI *_gfx = 0;
+    boolean _laststate, _currstate;
+
+public:
+    boolean _selected = false;
+    String *_label = nullptr;
+    TFT_Select_Box(void) : _textdatum(MC_DATUM)
+    {
+    }
+
+    void init(TFT_eSPI *gfx, int16_t x, int16_t y, int16_t w, int16_t h,
+              uint16_t outline, uint16_t fill, uint16_t textcolor, uint16_t selectcolor,
+              String *label, uint8_t textsize)
+    {
+        _x = x;
+        _y = y;
+        _w = w;
+        _h = h;
+        _gfx = gfx;
+        _outlinecolor = outline;
+        _fillcolor = fill;
+        _selectcolor = selectcolor;
+        _textcolor = textcolor;
+        _textsize = textsize;
+        _label = label;
+    }
+
+    void draw()
+    {
+        _gfx->fillRect(_x, _y, _w, _h, _fillcolor);
+        SerialDebug("selected");
+        SerialDebug(_selected);
+        SerialDebug("\n");
+
+        if (_selected)
+        {
+            SerialDebugln("using selectedcolor");
+            _gfx->drawRect(_x, _y, _w, _h, _selectcolor);
+        }
+        else
+        {
+            _gfx->drawRect(_x, _y, _w, _h, _outlinecolor);
+        }
+
+        _gfx->setTextSize(_textsize);
+        _gfx->setTextColor(_textcolor, _fillcolor);
+
+        uint8_t tempdatum = _gfx->getTextDatum();
+        _gfx->setTextDatum(_textdatum);
+        uint16_t tempPadding = _gfx->padX;
+        _gfx->setTextPadding(0);
+
+        _gfx->drawString(*_label, _x + (_w / 2), _y + (_h / 2));
+
+        _gfx->setTextDatum(tempdatum);
+        _gfx->setTextPadding(tempPadding);
+    }
+
+    void press(bool p)
+    {
+        _laststate = _currstate;
+        _currstate = p;
+    }
+
+    boolean contains(int16_t x, int16_t y)
+    {
+        return ((x >= _x) && (x < (_x + _w)) &&
+                (y >= _y) && (y < (_y + _h)));
+    }
+
+    bool isPressed() { return _currstate; }
+    bool isSelected() { return _selected; }
+    bool justPressed() { return (_currstate && !_laststate); }
+    bool justReleased() { return (!_currstate && _laststate); }
+};
+
+TFT_Select_Box wifiBoxes[2];
+TFT_Select_Box *selectedWifiBox = nullptr;
+
 // This is the file name used to store the calibration data
 #define CALIBRATION_FILE "/TouchCalData"
+#define WIFI_FILE "/WifiData"
 
 // Set REPEAT_CAL to true instead of false to run calibration
 // again, otherwise it will only be done once.
