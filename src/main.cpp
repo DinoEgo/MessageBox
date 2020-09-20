@@ -335,20 +335,14 @@ void drawWifi()
         tft.setTextSize(1);
         tft.print("SSID: ");
         //draw a box to the right
-        const int32_t ssid_x = 40;
-        const int32_t ssid_y = 20;
-        const int32_t ssid_w = 150;
-        const int32_t ssid_h = 20;
-        tft.drawRect(ssid_x, ssid_y, ssid_w, ssid_h, 0xFFFFFF);
+        wifiBoxes[0].init(&tft, ssid_x, ssid_y, ssid_w, ssid_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &ssid, 1);
+        wifiBoxes[0].draw();
 
         tft.setCursor(220, 20, 2);
         tft.print("Password: ");
         //draw a box to the right
-        const int32_t pp_x = 281;
-        const int32_t pp_y = 20;
-        const int32_t pp_w = 150;
-        const int32_t pp_h = 20;
-        tft.drawRect(pp_x, pp_y, pp_w, pp_h, 0xFFFFFF);
+        wifiBoxes[1].init(&tft, pw_x, pw_y, pw_w, pw_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &password, 1);
+        wifiBoxes[1].draw();
 
         int x = 40;
         int y = 180;
@@ -390,18 +384,49 @@ void wifiSetup()
     uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
 
     uint8_t touched = tft.getTouch(&t_x, &t_y);
-    SerialDebug("x ");
-    SerialDebug(t_x);
-    SerialDebug(" y ");
-    SerialDebug(t_y);
+    for (uint8_t i = 0; i < 2; ++i)
+    {
+        if (touched && wifiBoxes[i].contains(t_x, t_y))
+        {
+            wifiBoxes[i].press(true);
+        }
+        else
+        {
+            wifiBoxes[i].press(false);
+        }
+    }
+
+    for (uint8_t i = 0; i < 2; ++i)
+    {
+        if (wifiBoxes[i].justPressed())
+        {
+            if (selectedWifiBox == &wifiBoxes[i])
+            {
+                SerialDebugln("deselected ")
+                    selectedWifiBox->_selected = false;
+                selectedWifiBox->draw();
+                selectedWifiBox = nullptr;
+            }
+            else
+            {
+                SerialDebugln("selected ") if (selectedWifiBox != nullptr)
+                {
+                    selectedWifiBox->_selected = false;
+                    selectedWifiBox->draw();
+                }
+                selectedWifiBox = &wifiBoxes[i];
+                selectedWifiBox->_selected = true;
+                selectedWifiBox->draw();
+            }
+        }
+    }
 
     for (uint8_t i = 0; i < 42; ++i)
     {
         if (touched && keys[i].contains(t_x, t_y))
         {
-           
-                keys[i].press(true);
-                SerialDebugln(text_keyboard[i]);
+
+            keys[i].press(true);
         }
         else
         {
@@ -426,14 +451,20 @@ void wifiSetup()
                 if on password try to connect*/
                 break;
             case 1: //Clear
-                /* clear ssid or password, whatever is selected */
-                if(ssidActive)
-                    ssid = "";
-                else
-                    password = "";
+                if (selectedWifiBox != nullptr)
+                {
+                    *selectedWifiBox->_label = "";
+                    selectedWifiBox->draw();
+                }
                 break;
             case 2: //Del
                 /* clear one char from whatever is selected */
+                if (selectedWifiBox != nullptr)
+                {
+                    *selectedWifiBox->_label = selectedWifiBox->_label->substring(
+                        0, selectedWifiBox->_label->length() - 1);
+                    selectedWifiBox->draw();
+                }
                 break;
             case 3: //Shift
                 /* capitalise next char */
@@ -446,14 +477,15 @@ void wifiSetup()
                 break;
 
             default:
-                ssid += text_keyboard[i];
+                if (selectedWifiBox != nullptr)
+                {
+                    *selectedWifiBox->_label += text_keyboard[i];
+                    selectedWifiBox->draw();
+                }
                 break;
             }
         }
     }
-
-    tft.setCursor(42, 22);
-    tft.print(ssid);
     delay(25);
 
     return;
