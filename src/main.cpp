@@ -16,9 +16,8 @@
 #include "certs.exclude.h"
 
 #ifdef CERTS
-    X509List caCertX509(caCert);
+X509List caCertX509(caCert);
 #endif // ifdef CERTS
-
 
 //wifi
 WiFiClientSecure espClient;
@@ -192,14 +191,14 @@ void setup()
     setupDisplay();
     //setupWifi();
     delay(200);
-    #ifdef CERTS
-        espClient.setTrustAnchors(&caCertX509); //set the certificate
-        espClient.setFingerprint(fingerprint);  //only accept connections from certs with this fingerprint
-        espClient.allowSelfSignedCerts();       //allow my certs
-        //espClient.setInsecure(); //this will allow connections from any server
-    #endif // ifdef CERTS
+#ifdef CERTS
+    espClient.setTrustAnchors(&caCertX509); //set the certificate
+    espClient.setFingerprint(fingerprint);  //only accept connections from certs with this fingerprint
+    espClient.allowSelfSignedCerts();       //allow my certs
+    //espClient.setInsecure(); //this will allow connections from any server
+#endif // ifdef CERTS
     MQTTSetup();
-    SerialDebugln("Setup Complete")
+    SerialDebugln("Setup Complete");
 }
 
 void ReconnectMQTT()
