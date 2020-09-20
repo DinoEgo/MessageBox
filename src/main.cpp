@@ -12,17 +12,18 @@
 #define SERIAL_DEBUG
 #include "SerialDebug.h"
 
-const char caCert[] PROGMEM = R"EOF(
------BEGIN CERTIFICATE-----
------END CERTIFICATE-----
-)EOF";
-X509List caCertX509(caCert);
+//create a file with the following
+#include "certs.exclude.h"
+
+#ifdef CERTS
+    X509List caCertX509(caCert);
+#endif // ifdef CERTS
+
 
 //wifi
 WiFiClientSecure espClient;
 String ssid = "";
 String password = "";
-static const char *fingerprint PROGMEM = "";
 int wifiStatus;
 
 //MQTT
@@ -191,10 +192,12 @@ void setup()
     setupDisplay();
     //setupWifi();
     delay(200);
-    espClient.setTrustAnchors(&caCertX509); //set the certificate
-    espClient.setFingerprint(fingerprint);  //only accept connections from certs with this fingerprint
-    espClient.allowSelfSignedCerts();       //allow my certs
-    //espClient.setInsecure(); //this will allow connections from any server
+    #ifdef CERTS
+        espClient.setTrustAnchors(&caCertX509); //set the certificate
+        espClient.setFingerprint(fingerprint);  //only accept connections from certs with this fingerprint
+        espClient.allowSelfSignedCerts();       //allow my certs
+        //espClient.setInsecure(); //this will allow connections from any server
+    #endif // ifdef CERTS
     MQTTSetup();
     SerialDebugln("Setup Complete")
 }
