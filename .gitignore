@@ -40,4 +40,4 @@
 .vscode/launch.json
 .vscode/ipch
 
-*.exclude
+*.exclude.*
