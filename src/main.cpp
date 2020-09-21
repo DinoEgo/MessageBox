@@ -342,12 +342,27 @@ void drawKeyboard()
         //first 6 reserved, then new line
         if (i <= 5)
         {
-            keys[i].initButton(&tft, x, y, 40, 25, TFT_WHITE, TFT_BLUE, TFT_WHITE, (char *)(text_keyboard[i].c_str()), 1);
+            keys[i].initButton(&tft, x, y, 40, 25, TFT_WHITE, TFT_BLUE, TFT_WHITE, (char *)(keyboardArray[i].c_str()), 1);
             x += 45;
         }
         else
         {
-            keys[i].initButton(&tft, x, y, 35, 25, TFT_WHITE, TFT_LIGHTGREY, TFT_BLACK, (char *)(text_keyboard[i].c_str()), 1);
+            char key = symbol_keyboard[i].c_str()[0];
+            if (text_keyboard_enabled)
+            {
+                key = (keyboardArray[i].c_str()[0]);
+                if (caps_lock)
+                    key = toupper(key);
+
+                if (shift_pressed)
+                {
+                    if (isupper(key))
+                        key = tolower(key);
+                    else
+                        key = toupper(key);
+                }
+            }
+            keys[i].initButton(&tft, x, y, 35, 25, TFT_WHITE, TFT_LIGHTGREY, TFT_BLACK, &key, 1);
             x += 40;
         }
 
@@ -386,13 +401,39 @@ void drawWifi()
         wifiBoxes[1].init(&tft, pw_x, pw_y, pw_w, pw_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &password, 1);
         wifiBoxes[1].draw();
 
-        drawKeyboard();
+        text_keyboard_enabled = true;
+        drawKeyboard(text_keyboard);
     }
     return;
 }
 
+void storeWifiSettings()
+{
+    if (!SPIFFS.begin())
+    {
+        Serial.println("Formating file system");
+        SPIFFS.format();
+        SPIFFS.begin();
+    }
+
+    // check if file exists and remove if it does
+    if (SPIFFS.exists(WIFI_FILE))
+    {
+        SPIFFS.remove(WIFI_FILE);
+    }
+
+    File f = SPIFFS.open(WIFI_FILE, "w");
+    if (f)
+    {
+        String ssidPW = ssid + "\n" + password;
+        f.write(ssidPW.c_str());
+        f.close();
+    }
+}
+
 void wifiSetup()
 {
+
     //draw screen once
     drawWifi();
 
@@ -417,14 +458,15 @@ void wifiSetup()
         {
             if (selectedWifiBox == &wifiBoxes[i])
             {
-                SerialDebugln("deselected ")
-                    selectedWifiBox->_selected = false;
+                SerialDebugln("deselected ");
+                selectedWifiBox->_selected = false;
                 selectedWifiBox->draw();
                 selectedWifiBox = nullptr;
             }
             else
             {
-                SerialDebugln("selected ") if (selectedWifiBox != nullptr)
+                SerialDebugln("selected ");
+                if (selectedWifiBox != nullptr)
                 {
                     selectedWifiBox->_selected = false;
                     selectedWifiBox->draw();
@@ -495,18 +537,79 @@ void wifiSetup()
                 break;
             case 3: //Shift
                 /* capitalise next char */
+                shift_pressed = true;
+                if (text_keyboard_enabled)
+                {
+                    drawKeyboard(text_keyboard);
+                }
+                else
+                {
+                    drawKeyboard(symbol_keyboard);
+                }
                 break;
             case 4: //Caps
                 /* capatalise all chars until toggled */
+                caps_lock = !caps_lock;
+                if (text_keyboard_enabled)
+                {
+                    drawKeyboard(text_keyboard);
+                }
+                else
+                {
+                    drawKeyboard(symbol_keyboard);
+                }
                 break;
             case 5: //Sym
                 /* switch keyboards */
+                if (text_keyboard_enabled)
+                {
+                    text_keyboard_enabled = false;
+                    drawKeyboard(symbol_keyboard);
+                }
+                else
+                {
+                    text_keyboard_enabled = true;
+                    drawKeyboard(text_keyboard);
+                }
                 break;
 
             default:
                 if (selectedWifiBox != nullptr)
                 {
-                    *selectedWifiBox->_label += text_keyboard[i];
+                    if (text_keyboard_enabled)
+                    {
+                        char text_key = text_keyboard[i].c_str()[0];
+                        if (caps_lock)
+                            text_key = toupper(text_key);
+
+                        if (shift_pressed)
+                        {
+                            if (isupper(text_key))
+                                text_key = tolower(text_key);
+                            else
+                                text_key = toupper(text_key);
+                            shift_pressed = false;
+                            /*
+                                I would like to put this in a method, but for some dumb
+                                reason it prints a question mark next to the char on the
+                                keyboard if its in a function
+                            */
+                            if (text_keyboard_enabled)
+                            {
+                                drawKeyboard(text_keyboard);
+                            }
+                            else
+                            {
+                                drawKeyboard(symbol_keyboard);
+                            }
+                        }
+
+                        *selectedWifiBox->_label += text_key;
+                    }
+                    else
+                    {
+                        *selectedWifiBox->_label += symbol_keyboard[i];
+                    }
                     selectedWifiBox->draw();
                 }
                 break;
