@@ -70,10 +70,14 @@ const String text_keyboard[42] = {
 
 const String symbol_keyboard[42] = {
     "OK", "Clear", "Del", "Shift", "Caps", "txt",
-    "`", "¬", "!", "\"", "£", "$", "%", "^", "&", "*",
-    "(", ")", "_", "-", "+", "=", "{", "[", "}", "]",
-    ";", ":", "\'", "@", "#", "~", ",", "<", ".",
-    ">", "/", "?", "|", "\\", "", ""};
+    "`", "!", "\"", "$", "%", "^", "&", "*", "(", ")",
+    "_", "-", "+", "=", "{", "[", "}", "]", ";", ":",
+    "\'", "@", "#", "~", ",", "<", ".", ">", "/",
+    "?", "|", "\\", "", "", "", ""};
+
+boolean text_keyboard_enabled = true;
+boolean caps_lock = false;
+boolean shift_pressed = false;
 
 TFT_eSPI_Button keys[42];
 
