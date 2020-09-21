@@ -48,6 +48,7 @@ enum ScreenState
 {
     none,
     calibrate,
+    drawing,
     wifi
 };
 ScreenState currentScreen = ScreenState::none;
@@ -122,7 +123,6 @@ public:
 
         if (_selected)
         {
-            SerialDebugln("using selectedcolor");
             _gfx->drawRect(_x, _y, _w, _h, _selectcolor);
         }
         else
@@ -291,7 +291,6 @@ void setup()
     Serial.begin(921600);
 #endif
     setupDisplay();
-    //setupWifi();
     delay(200);
 #ifdef CERTS
     espClient.setTrustAnchors(&caCertX509); //set the certificate
@@ -333,7 +332,7 @@ void MQTTLoop()
     client.loop();
 }
 
-void drawKeyboard()
+void drawKeyboard(const String keyboardArray[42])
 {
     int x = 20;
     int y = 180;
@@ -380,11 +379,67 @@ void drawKeyboard()
     }
 }
 
+bool connectStoredSettings()
+{
+    SerialDebugln("connectStoredSettings");
+    if (!SPIFFS.begin())
+    {
+        Serial.println("Formating file system");
+        SPIFFS.format();
+        SPIFFS.begin();
+    }
+
+    if (!SPIFFS.exists(WIFI_FILE))
+    {
+        return false;
+    }
+
+    File f = SPIFFS.open(WIFI_FILE, "r");
+    if (f)
+    {
+        ssid = f.readStringUntil('\n');
+        password = f.readString();
+        f.close();
+        SerialDebugln(ssid);
+        SerialDebugln(password);
+        setupWifi();
+        int retries = 0;
+        while (WiFi.status() != WL_CONNECTED && retries < 15)
+        {
+            delay(1000);
+            String connectingMsg = "Connecting to " + ssid + " retries: " + retries;
+            tft.drawCentreString(connectingMsg, 240, 130, 1);
+            SerialDebugln(connectingMsg);
+            ++retries;
+        }
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            tft.drawCentreString("Connected!", 240, 140, 1);
+            return true;
+        }
+        else
+        {
+            tft.drawCentreString("Failed to connect " + (String)WiFi.status() + ".", 240, 140, 1);
+        }
+    }
+    return false;
+}
+
 void drawWifi()
 {
     if (currentScreen != ScreenState::wifi) // draw screen
     {
         currentScreen = ScreenState::wifi;
+
+        //try to connect using stored data
+        if (connectStoredSettings())
+        {
+            SerialDebugln("connectedsuccessfully");
+            return;
+        }
+        else
+            SerialDebugln("notconnectedsuccessfully");
+
         tft.fillScreen(0x000000); //fill black
         tft.setCursor(5, 20, 2);
         tft.setTextSize(1);
@@ -500,24 +555,30 @@ void wifiSetup()
         if (keys[i].justPressed())
         {
             keys[i].drawButton(true);
+            int retries = 0;
             switch (i)
             {
             case 0: //OK
                 /* if on ssid move to password,
                 if on password try to connect*/
                 setupWifi();
-                int retries = 0;
                 while (WiFi.status() != WL_CONNECTED && retries < 15)
                 {
-                    delay(500);
+                    delay(1000);
                     String connectingMsg = "Connecting to " + ssid + " retries: " + retries;
-                    tft.drawCentreString(connectingMsg, 240, 160, 1);
+                    tft.drawCentreString(connectingMsg, 240, 130, 1);
                     SerialDebugln(connectingMsg);
                     ++retries;
                 }
                 if (WiFi.status() == WL_CONNECTED)
-                    tft.drawCentreString("Connected!", 240, 160, 1);
-
+                {
+                    tft.drawCentreString("Connected!", 240, 140, 1);
+                    storeWifiSettings();
+                }
+                else
+                {
+                    tft.drawCentreString("Failed to connect " + (String)WiFi.status() + ".", 240, 140, 1);
+                }
                 break;
             case 1: //Clear
                 if (selectedWifiBox != nullptr)
@@ -621,6 +682,20 @@ void wifiSetup()
     return;
 }
 
+void drawDrawingScreen()
+{
+    if (currentScreen != ScreenState::drawing)
+    {
+        //draw buttons on left hand side
+        tft.fillScreen(TFT_BLACK);
+    }
+}
+
+void drawingScreen()
+{
+    tft.fillScreen(TFT_BLUE);
+}
+
 /**
  * There are multiple states of screen:
  * 1) on startup there is no calibration file, calibration screen will show NOTE: this is not handled here
@@ -637,22 +712,25 @@ void loopScreen()
 {
 
     // Pressed will be set true is there is a valid touch on the screen
-    wifiStatus = WiFi.status();
+    SerialDebugln(WiFi.status());
+    tft.setCursor(10, 100);
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        tft.println("Wifi Connected");
+    }
+    else
+        tft.println("Wifi Not Connected");
 
     //SerialDebugln(wifiStatus);
-    //if(wifiStatus != WL_CONNECTED)
+    if (WiFi.status() != WL_CONNECTED)
     {
         wifiSetup();
         return;
     }
-    // / Check if any key coordinate boxes contain the touch coordinates
-    // for (uint8_t b = 0; b < 15; b++) {
-    //   if (pressed && key[b].contains(t_x, t_y)) {
-    //     key[b].press(true);  // tell the button it is pressed
-    //   } else {
-    //     key[b].press(false);  // tell the button it is NOT pressed
-    //   }
-    // }
+    else
+    {
+        drawingScreen();
+    }
 }
 
 void loop(void)
