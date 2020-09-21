@@ -13,6 +13,17 @@
 #include "SerialDebug.h"
 
 //create a file with the following
+/*
+#define CERTS
+const char caCert[] PROGMEM = R"EOF(
+-----BEGIN CERTIFICATE-----
+   YOUR CERT GOES HERE
+-----END CERTIFICATE-----
+)EOF";
+
+static const char *fingerprint PROGMEM  = "YOUR FINGERPRINT HERE";
+
+*/
 #include "certs.exclude.h"
 
 #ifdef CERTS
@@ -241,13 +252,6 @@ void setupWifi()
 
     SerialDebug("Your are connecting to;");
     SerialDebugln(ssid);
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 15)
-    {
-        delay(500);
-        SerialDebug(".");
-        ++retries;
-    }
 }
 
 void OnMessage(char *topic, byte *payload, int length)
@@ -325,6 +329,38 @@ void MQTTLoop()
     client.loop();
 }
 
+void drawKeyboard()
+{
+    int x = 20;
+    int y = 180;
+    for (uint i = 0; i < 42; ++i)
+    {
+        //first 6 reserved, then new line
+        if (i <= 5)
+        {
+            keys[i].initButton(&tft, x, y, 40, 25, TFT_WHITE, TFT_BLUE, TFT_WHITE, (char *)(text_keyboard[i].c_str()), 1);
+            x += 45;
+        }
+        else
+        {
+            keys[i].initButton(&tft, x, y, 35, 25, TFT_WHITE, TFT_LIGHTGREY, TFT_BLACK, (char *)(text_keyboard[i].c_str()), 1);
+            x += 40;
+        }
+
+        keys[i].drawButton();
+
+        if (
+            i == 5 ||  //ok,clear,del,shift,caps,txt
+            i == 15 || //0123456789
+            i == 25 || //qwertyuiop
+            i == 34)   //asdfghjkl
+        {
+            x = 60;
+            y += 30;
+        }
+    }
+}
+
 void drawWifi()
 {
     if (currentScreen != ScreenState::wifi) // draw screen
@@ -336,7 +372,9 @@ void drawWifi()
         tft.print("SSID: ");
         //draw a box to the right
         wifiBoxes[0].init(&tft, ssid_x, ssid_y, ssid_w, ssid_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &ssid, 1);
+        wifiBoxes[0]._selected = true;
         wifiBoxes[0].draw();
+        selectedWifiBox = &wifiBoxes[0];
 
         tft.setCursor(220, 20, 2);
         tft.print("Password: ");
@@ -344,34 +382,7 @@ void drawWifi()
         wifiBoxes[1].init(&tft, pw_x, pw_y, pw_w, pw_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &password, 1);
         wifiBoxes[1].draw();
 
-        int x = 40;
-        int y = 180;
-        for (uint i = 0; i < 42; ++i)
-        {
-            //first 6 reserved, then new line
-            if (i <= 5)
-            {
-                keys[i].initButton(&tft, x, y, 40, 25, TFT_WHITE, TFT_BLUE, TFT_WHITE, (char *)(text_keyboard[i].c_str()), 1);
-                x += 45;
-            }
-            else
-            {
-                keys[i].initButton(&tft, x, y, 35, 25, TFT_WHITE, TFT_LIGHTGREY, TFT_BLACK, (char *)(text_keyboard[i].c_str()), 1);
-                x += 40;
-            }
-
-            keys[i].drawButton();
-
-            if (
-                i == 5 ||  //ok,clear,del,shift,caps,txt
-                i == 15 || //0123456789
-                i == 25 || //qwertyuiop
-                i == 34)   //asdfghjkl
-            {
-                x = 60;
-                y += 30;
-            }
-        }
+        drawKeyboard();
     }
     return;
 }
@@ -382,8 +393,8 @@ void wifiSetup()
     drawWifi();
 
     uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
-
     uint8_t touched = tft.getTouch(&t_x, &t_y);
+
     for (uint8_t i = 0; i < 2; ++i)
     {
         if (touched && wifiBoxes[i].contains(t_x, t_y))
@@ -425,7 +436,6 @@ void wifiSetup()
     {
         if (touched && keys[i].contains(t_x, t_y))
         {
-
             keys[i].press(true);
         }
         else
@@ -449,6 +459,19 @@ void wifiSetup()
             case 0: //OK
                 /* if on ssid move to password,
                 if on password try to connect*/
+                setupWifi();
+                int retries = 0;
+                while (WiFi.status() != WL_CONNECTED && retries < 15)
+                {
+                    delay(500);
+                    String connectingMsg = "Connecting to " + ssid + " retries: " + retries;
+                    tft.drawCentreString(connectingMsg, 240, 160, 1);
+                    SerialDebugln(connectingMsg);
+                    ++retries;
+                }
+                if (WiFi.status() == WL_CONNECTED)
+                    tft.drawCentreString("Connected!", 240, 160, 1);
+
                 break;
             case 1: //Clear
                 if (selectedWifiBox != nullptr)
