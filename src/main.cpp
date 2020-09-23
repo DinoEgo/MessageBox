@@ -12,6 +12,8 @@
 #define SERIAL_DEBUG
 #include "SerialDebug.h"
 
+#include "select_box.h"
+
 //create a file with the following
 /*
 #define CERTS
@@ -81,86 +83,6 @@ boolean caps_lock = false;
 boolean shift_pressed = false;
 
 TFT_eSPI_Button keys[42];
-
-class TFT_Select_Box
-{
-private:
-    int16_t _x, _y, _w, _h, _outlinecolor, _fillcolor, _textcolor, _selectcolor = 0;
-    uint8_t _textsize, _textdatum = 0;
-    TFT_eSPI *_gfx = 0;
-    boolean _laststate, _currstate;
-
-public:
-    boolean _selected = false;
-    String *_label = nullptr;
-    TFT_Select_Box(void) : _textdatum(MC_DATUM)
-    {
-    }
-
-    void init(TFT_eSPI *gfx, int16_t x, int16_t y, int16_t w, int16_t h,
-              uint16_t outline, uint16_t fill, uint16_t textcolor, uint16_t selectcolor,
-              String *label, uint8_t textsize)
-    {
-        _x = x;
-        _y = y;
-        _w = w;
-        _h = h;
-        _gfx = gfx;
-        _outlinecolor = outline;
-        _fillcolor = fill;
-        _selectcolor = selectcolor;
-        _textcolor = textcolor;
-        _textsize = textsize;
-        _label = label;
-    }
-
-    void draw()
-    {
-        _gfx->fillRect(_x, _y, _w, _h, _fillcolor);
-        SerialDebug("selected");
-        SerialDebug(_selected);
-        SerialDebug("\n");
-
-        if (_selected)
-        {
-            _gfx->drawRect(_x, _y, _w, _h, _selectcolor);
-        }
-        else
-        {
-            _gfx->drawRect(_x, _y, _w, _h, _outlinecolor);
-        }
-
-        _gfx->setTextSize(_textsize);
-        _gfx->setTextColor(_textcolor, _fillcolor);
-
-        uint8_t tempdatum = _gfx->getTextDatum();
-        _gfx->setTextDatum(_textdatum);
-        uint16_t tempPadding = _gfx->padX;
-        _gfx->setTextPadding(0);
-
-        _gfx->drawString(*_label, _x + (_w / 2), _y + (_h / 2));
-
-        _gfx->setTextDatum(tempdatum);
-        _gfx->setTextPadding(tempPadding);
-    }
-
-    void press(bool p)
-    {
-        _laststate = _currstate;
-        _currstate = p;
-    }
-
-    boolean contains(int16_t x, int16_t y)
-    {
-        return ((x >= _x) && (x < (_x + _w)) &&
-                (y >= _y) && (y < (_y + _h)));
-    }
-
-    bool isPressed() { return _currstate; }
-    bool isSelected() { return _selected; }
-    bool justPressed() { return (_currstate && !_laststate); }
-    bool justReleased() { return (!_currstate && _laststate); }
-};
 
 TFT_Select_Box wifiBoxes[2];
 TFT_Select_Box *selectedWifiBox = nullptr;
@@ -446,7 +368,7 @@ void drawWifi()
         tft.print("SSID: ");
         //draw a box to the right
         wifiBoxes[0].init(&tft, ssid_x, ssid_y, ssid_w, ssid_h, TFT_WHITE, TFT_TRANSPARENT, TFT_WHITE, TFT_GREEN, &ssid, 1);
-        wifiBoxes[0]._selected = true;
+        wifiBoxes[0].m_selected = true;
         wifiBoxes[0].draw();
         selectedWifiBox = &wifiBoxes[0];
 
@@ -514,7 +436,7 @@ void wifiSetup()
             if (selectedWifiBox == &wifiBoxes[i])
             {
                 SerialDebugln("deselected ");
-                selectedWifiBox->_selected = false;
+                selectedWifiBox->m_selected = false;
                 selectedWifiBox->draw();
                 selectedWifiBox = nullptr;
             }
@@ -523,11 +445,11 @@ void wifiSetup()
                 SerialDebugln("selected ");
                 if (selectedWifiBox != nullptr)
                 {
-                    selectedWifiBox->_selected = false;
+                    selectedWifiBox->m_selected = false;
                     selectedWifiBox->draw();
                 }
                 selectedWifiBox = &wifiBoxes[i];
-                selectedWifiBox->_selected = true;
+                selectedWifiBox->m_selected = true;
                 selectedWifiBox->draw();
             }
         }
@@ -583,7 +505,7 @@ void wifiSetup()
             case 1: //Clear
                 if (selectedWifiBox != nullptr)
                 {
-                    *selectedWifiBox->_label = "";
+                    *selectedWifiBox->m_label = "";
                     selectedWifiBox->draw();
                 }
                 break;
@@ -591,8 +513,8 @@ void wifiSetup()
                 /* clear one char from whatever is selected */
                 if (selectedWifiBox != nullptr)
                 {
-                    *selectedWifiBox->_label = selectedWifiBox->_label->substring(
-                        0, selectedWifiBox->_label->length() - 1);
+                    *selectedWifiBox->m_label = selectedWifiBox->m_label->substring(
+                        0, selectedWifiBox->m_label->length() - 1);
                     selectedWifiBox->draw();
                 }
                 break;
@@ -665,11 +587,11 @@ void wifiSetup()
                             }
                         }
 
-                        *selectedWifiBox->_label += text_key;
+                        *selectedWifiBox->m_label += text_key;
                     }
                     else
                     {
-                        *selectedWifiBox->_label += symbol_keyboard[i];
+                        *selectedWifiBox->m_label += symbol_keyboard[i];
                     }
                     selectedWifiBox->draw();
                 }
