@@ -635,13 +635,6 @@ void loopScreen()
 
     // Pressed will be set true is there is a valid touch on the screen
     SerialDebugln(WiFi.status());
-    tft.setCursor(10, 100);
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        tft.println("Wifi Connected");
-    }
-    else
-        tft.println("Wifi Not Connected");
 
     //SerialDebugln(wifiStatus);
     if (WiFi.status() != WL_CONNECTED)
@@ -667,23 +660,4 @@ void loop(void)
     // tft.println("Hello World!");
     // SerialDebugln(".");
     // //MQTTLoop();
-
-    // wifiStatus = WiFi.status();
-
-    // if(wifiStatus == WL_CONNECTED){
-    //     SerialDebugln("");
-    //     SerialDebugln("Your ESP is connected!");
-    //     // tft.setCursor(10,10,2);
-    //     // tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    //     // tft.setTextSize(1);
-    //     // tft.println("Connected to" + ssid);
-    //     // tft.println("Your IP address is: " + WiFi.localIP().toString());
-    //     SerialDebugln("Your IP address is: ");
-    //     SerialDebugln("Message:  " + displayMessage);
-    //     SerialDebugln(WiFi.localIP());
-    // }
-    // else{
-    //   SerialDebugln("");
-    //   SerialDebugln("WiFi not connected");
-    // }
 }
