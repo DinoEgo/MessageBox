@@ -95,6 +95,7 @@ TFT_Select_Box *selectedWifiBox = nullptr;
 // again, otherwise it will only be done once.
 // Repeat calibration if you change the screen rotation.
 #define REPEAT_CAL false
+#define REPEAT_WIFI false
 
 void touch_calibrate()
 {
@@ -212,6 +213,7 @@ void setup()
 #ifdef SERIAL_DEBUG
     Serial.begin(921600);
 #endif
+    WiFi.setAutoConnect(false); // do not autoconnect
     setupDisplay();
     delay(200);
 #ifdef CERTS
@@ -311,6 +313,12 @@ bool connectStoredSettings()
         SPIFFS.begin();
     }
 
+    if (REPEAT_WIFI)
+    {
+        // Delete if we want to re-setup
+        SPIFFS.remove(WIFI_FILE);
+    }
+
     if (!SPIFFS.exists(WIFI_FILE))
     {
         return false;
@@ -352,6 +360,7 @@ void drawWifi()
     if (currentScreen != ScreenState::wifi) // draw screen
     {
         currentScreen = ScreenState::wifi;
+        tft.fillScreen(0x000000); //fill black
 
         //try to connect using stored data
         if (connectStoredSettings())
@@ -362,7 +371,6 @@ void drawWifi()
         else
             SerialDebugln("notconnectedsuccessfully");
 
-        tft.fillScreen(0x000000); //fill black
         tft.setCursor(5, 20, 2);
         tft.setTextSize(1);
         tft.print("SSID: ");
@@ -608,14 +616,21 @@ void drawDrawingScreen()
 {
     if (currentScreen != ScreenState::drawing)
     {
+        currentScreen = ScreenState::drawing;
         //draw buttons on left hand side
-        tft.fillScreen(TFT_BLACK);
+        tft.fillScreen(TFT_CYAN);
     }
 }
 
 void drawingScreen()
 {
-    tft.fillScreen(TFT_BLUE);
+    drawDrawingScreen();
+    //check touched
+
+    // if within buttons do button actions
+
+    // if within drawing square - draw
+    
 }
 
 /**
@@ -634,9 +649,7 @@ void loopScreen()
 {
 
     // Pressed will be set true is there is a valid touch on the screen
-    SerialDebugln(WiFi.status());
-
-    //SerialDebugln(wifiStatus);
+    //SerialDebugln(WiFi.status());
     if (WiFi.status() != WL_CONNECTED)
     {
         wifiSetup();
